@@ -14,7 +14,7 @@
 #include <conio.c>
 #include <time.h>
 
-// Directivas de preprocesador
+/* Directivas de preprocesador */
 
 #define MAXIDCLIENTE 16
 #define MAXIDPROP 16
@@ -35,17 +35,40 @@
 #define FALSE   0
 #define TRUE    1
 
-#define ARRIBA   72
-#define ABAJO    80
-#define ENTER    13
-#define ESC      27
-#define EXIT     -1
+#define ARRIBA      72
+#define ABAJO       80
+#define IZQUIERDA   75
+#define DERECHA     77
+#define ENTER       13
+#define ESC         27
+#define BARRA       32
+#define BKSP         8
+#define EXIT        -1
+#define POINT       46
+#define SLASH       47
+#define MAXDATE     10
+#define DM30        30
+#define DM31        31
+#define FEB          2
+#define MAXLINE     80
+
+#define INFNUM    48
+#define SUPNUM    57
+#define GUION     45
+#define ESPACIO   ' '
 
 #define MAXOPC   30
 #define INIX      3
 #define INIY      3
 
-// Estructuras
+#define AGREGAR     0
+#define LEER        1
+#define MODIFICAR   2
+#define BORRAR      3
+
+#define ARCHCLIENTES   "clientes.dat"
+
+/* Estructuras */
 
 typedef struct{
  int dia,mes,agno;
@@ -129,12 +152,36 @@ typedef struct{
    FECHA fecha;
 }DETALLEDEVOLUCION;
 
-// Prototipos de funciones
+// Estrucutras para las listas doblemente enlazadas
 
+typedef struct nodocliente {
+   CLIENTE datos;
+   struct nodocliente *anterior;
+   struct nodocliente *siguiente;
+}NODOCLIENTE;
+
+/* Prototipos de funciones */
+
+// menús
 int seleccionarOpcion(char [][MAXOPC], int, int, int, int);
 void mostrarMenu(char [][MAXOPC], int, int, int, int);
 void setColor(int, int);
 void defaultColor();
+
+// datos de clientes
+void opcionesCliente(int, char*);
+void capturarDatosCliente();
+
+// validador de campo
+void captureTextField(char*, int, int, int, int, int);
+int validSep(char*, int);
+int strEnd(char*);
+void captureDateField(char*, int, int, int);
+int validDate(char*, int*, int*, int*);
+void captureIntegerField(int*, char*, int, int, int);
+void captureNumericField(float*, char*, int, int, int, int);
+void showField(char*, int, int, int, int);
+void clearLine(int, int);
 
 /*
    Función   :
@@ -172,6 +219,12 @@ int main()
       opcionini = seleccionarOpcion(menuinicio, 11, INIX, INIY+2, 0);
       opcioncrud = seleccionarOpcion(crud, 4, INIX+26, INIY+opcionini+2, 0);
       system("cls");
+
+      // datos de clientes
+      if (opcionini == 0)
+      {
+         opcionesCliente(opcioncrud, ARCHCLIENTES);
+      }
    }
 
    return 0;
@@ -277,6 +330,543 @@ void defaultColor()
 {
    setColor(WHITE, BLACK);
 }
+
+/*
+   Función   : opcionesCliente
+   Argumentos: int opcion: indica la acción a realizar
+               char *archivo: nombre del archivo donde se encuentran los datos
+   Objetivo  : agregar, leer, modificar o borrar datos de los clientes
+   Retorno   : ---
+*/
+void opcionesCliente(int opcion, char *archivo)
+{
+   FILE *pf;
+   NODOCLIENTE *clientes = NULL;
+   CLIENTE *cliente;
+   int cantidad;
+
+   if (opcion == AGREGAR)
+   {
+      cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+      printf("Digite los datos del cliente:\n\n");
+      capturarDatosCliente(cliente);
+      free(cliente);
+   }
+   else if (opcion == LEER)
+   {
+
+   }
+   else if (opcion == MODIFICAR)
+   {
+
+   }
+   else if (opcion == BORRAR)
+   {
+
+   }
+
+   return;
+}
+
+/*
+   Función     : capturarDatosCliente
+   Arrgumentos : CLIENTE *cliente: referencia donde se almacenarán los datos
+   Objetivo    : capturar los datos de un cliente
+   Retorno     : ---
+*/
+void capturarDatosCliente(CLIENTE *cliente)
+{
+   printf("Primer nombre: ");
+   captureTextField(cliente->primernomb, LENPRINOMBRE, 15, 3, FALSE, FALSE);
+   printf("Segundo nombre: ");
+   captureTextField(cliente->segnomb, LENSEGNOMBRE, 16, 4, FALSE, FALSE);
+   printf("Primer apellido: ");
+   captureTextField(cliente->primerapel, LENPRIAPEL, 17, 5, FALSE, FALSE);
+   printf("Segundo apellido: ");
+   captureTextField(cliente->segapel, LENSEGAPEL, 18, 6, FALSE, FALSE);
+   printf("ID documento: ");
+   captureTextField(cliente->docid, MAXID, 14, 7, TRUE, FALSE);
+   printf("Direcci%cn: ", 162);
+   captureTextField(cliente->direccion, LENDIR, 11, 8, FALSE, FALSE);
+}
+
+/*
+   Función     : captureTextField
+   Arrgumentos : char* str    : cadena de texto a capturar
+                 int n        : longitud de "str"
+                 char* tipo   : indica el mensaje según el tipo de dato
+                 int pos_x    : posición en las columnas
+                 int pos_y    : posición en las filas
+                 int flag     : indica si se restringe el espacio
+                 int alfanumeric: indica si el campo será alfa-numérico
+   Objetivo    : capturar campo de tipo texto
+   Retorno     : ---
+*/
+void captureTextField(char* str, int n, int pos_x, int pos_y, int flag, int alfanumeric)
+{
+   int index = 0, last = index;
+   char key, temp[n];
+
+   do {
+
+      showField(str, index, n, pos_x, pos_y);
+
+      do {
+         key = getch();
+      } while (!(key >= 33 && key <= 126) && key != IZQUIERDA && key != DERECHA &&
+               key != BARRA && key != BKSP && key != ESC && key != ENTER);
+
+      if (alfanumeric && !(key >= INFNUM && key <= SUPNUM) && key != BKSP && key != ESC && key != ENTER)
+         continue;
+
+      if (key == DERECHA)
+      {
+         if (index < n-1 && index < last)
+         {
+            index++;
+         }
+      }
+      else if (key == IZQUIERDA)
+      {
+         if (index > 0)
+            index--;
+      }
+      else if (key == BARRA)
+      {
+         if (!flag)
+         {
+            // se verifica que los caracteres no se salgan del margen
+            // permitido al presionar la barra espaciadora
+            if (index < n-1 && strEnd(str) < n)
+            {
+               strcpy(temp, str+index);
+               strcpy(str+index, " ");
+               strcpy(str+index+1, temp);
+               index++;
+               last++;
+            }
+         }
+      }
+      else
+      {
+         if (key != ENTER && key != ESC)
+         {
+            if (key == BKSP)
+            {
+               if (index)
+               {
+                  strcpy(temp, str+index);
+                  index--;
+                  strcpy(str+index, temp);
+                  last--;
+               }
+            }
+            else if (index < n)
+            {
+               *(str+index) = key;
+               index++;
+
+               if (index > last)
+                  last = index;
+            }
+         }
+      }
+
+      *(str+last) = NULL;
+
+   } while (key != ENTER && key != ESC);
+
+   clearLine(pos_x, pos_y);
+   gotoxy(pos_x, pos_y);
+   printf(" %s", str);
+   printf("\n");
+
+   return;
+}
+
+/*
+   Función     : validSep
+   Arrgumentos : char* str : cadena de texto
+                 int pos   : posición del cursor
+   Objetivo    : confirmar si la separación entre letras es válida
+   Retorno     : (int) 1 si la separación es válida; (int) 0 en caso contrario
+*/
+int validSep(char* str, int pos)
+{
+   if ( !(strncmp(str+pos-2, "  ", 2)) || !(strncmp(str+pos, "  ", 2)) )
+      return FALSE;
+   else
+      return TRUE;
+}
+
+/*
+   Función     : strEnd
+   Arrgumentos : char* str : cadena de texto
+   Objetivo    : encontrar la posición del caracter NULL
+   Retorno     : (int) count : posición del caracter NULL
+*/
+int strEnd(char* str)
+{
+   int count = 0;
+
+   while (*(str+count))
+      count++;
+
+   return count;
+}
+
+/*
+   Función     : captureDateField
+   Arrgumentos : char* str    : cadena de texto a capturar
+                 int n        : longitud de "str"
+                 int pos_x    : columnas
+                 int pos_y    : filas
+   Objetivo    : capturar campo de tipo fecha
+   Retorno     : ---
+*/
+void captureDateField(char* str, int n, int pos_x, int pos_y)
+{
+   int index = 0, last = index;
+   char key;
+
+   do {
+
+      showField(str, index, n, pos_x, pos_y);
+
+      do {
+         key = getch();
+      } while (!(key >= INFNUM && key <= SUPNUM) && key != SLASH && key != ENTER && key != ESC
+               && key != DERECHA && key != IZQUIERDA && key != BKSP);
+
+      if (key == DERECHA)
+      {
+         if (index < n-1 && index < last)
+            index++;
+      }
+      else if (key == IZQUIERDA)
+      {
+         if (index > 0)
+            index--;
+      }
+      else
+      {
+         if (key != ENTER && key != ESC)
+         {
+            if (key == BKSP)
+            {
+               if (index)
+               {
+                  index--;
+                  *(str+index) = NULL;
+                  last--;
+               }
+            }
+            else if (index < n)
+            {
+               *(str+index) = key;
+               index++;
+
+               if (index > last)
+                  last = index;
+            }
+         }
+      }
+
+      *(str+last) = NULL;
+
+   } while (key != ENTER && key != ESC);
+
+   return;
+}
+
+/*
+   Función     : validDate
+   Arrgumentos : char* date : fecha en cadena de texto
+                 int* day   : almacena el día en "date"
+                 int* month : almacena el mes en "date"
+                 int* year  : almacena el año en "date"
+   Objetivo    : validar que la fecha y su formato sean correctos
+   Retorno     : (int) 1 si la fecha es correcta; (int) 0 en caso contrario
+*/
+int validDate(char* date, int* day, int* month, int* year)
+{
+   int index, count;
+
+   // validando la posición de los slash
+   if (*(date+2) != SLASH && *(date+5) != SLASH)
+      return FALSE;
+
+   // validando la cantidad de números
+   for (index = 0, count = 0; index < MAXDATE; index++)
+   {
+      if (*(date+index) >= '0' && *(date+index) <= '9')
+         count++;
+   }
+
+   if (count != 8) return FALSE;
+
+   char temp[MAXDATE-6];
+   int d_months[] = {DM31, DM30-2, DM31, DM30, DM31, DM30, DM31, DM31, DM30, DM31, DM30, DM31};
+
+   strncpy(temp, date, 2);
+   *day = strtol(temp, NULL, 10);
+   strncpy(temp, date+3, 2);
+   *month = strtol(temp, NULL, 10);
+   strncpy(temp, date+6, 4);
+   *year = strtol(temp, NULL, 10);
+
+   // validando la cantidad de días en los meses
+   if (*month <= 12 && *month > 0 && *day > 0)
+   {
+      if (*month == FEB)
+      {
+         // validando año bisiesto
+         if ( *day == DM30-1 && !(*year % 4) )
+            return TRUE;
+      }
+
+      if (*day > d_months[*month-1])
+         return FALSE;
+   }
+   else
+      return FALSE;
+
+   return TRUE;
+}
+
+/*
+   Función     : captureIntegerField
+   Arrgumentos : int* num      : número a capturar
+                 int digits    : cantidad de dígitos permitidos en "str"
+                 int pos_x    : posición en las columnas
+                 int pos_y    : posición en las filas
+   Objetivo    : capturar campo de tipo numérico
+   Retorno     : ---
+*/
+void captureIntegerField(int* num, char* tipo, int digits, int pos_x, int pos_y)
+{
+   int index = 0, n = digits, last = index;
+   char key, *str;
+
+   str = (char*)calloc(digits, sizeof(char));
+
+   printf("%s", tipo);
+
+   do {
+
+      showField(str, index, n, pos_x, pos_y);
+
+      do {
+         key = getch();
+      } while (!(key >= '0' && key <= '9') && key != ENTER && key != ESC &&
+                key != DERECHA && key != IZQUIERDA && key != BKSP);
+
+      if (key == DERECHA)
+      {
+         if (index < n-1 && index < last)
+            index++;
+      }
+      else if (key == IZQUIERDA)
+      {
+         if (index > 0)
+            index--;
+      }
+      else
+      {
+         if (key != ENTER && key != ESC)
+         {
+            if (key == BKSP)
+            {
+               if (index)
+               {
+                  index--;
+                  *(str+index) = NULL;
+                  last--;
+               }
+            }
+            else if (index < n)
+            {
+               *(str+index) = key;
+               index++;
+
+               if (index > last)
+                  last = index;
+            }
+         }
+      }
+
+      *(str+last) = NULL;
+
+   } while (key != ENTER && key != ESC);
+
+   *num = strtol(str, NULL, 10);
+
+   clearLine(pos_x, pos_y);
+   gotoxy(pos_x, pos_y);
+   printf("%d", *num);
+   printf("\n");
+
+   return;
+}
+
+/*
+   Función     : captureNumericField
+   Arrgumentos : int* num      : número a capturar
+                 int digits    : cantidad de dígitos permitidos en "str"
+                 int precision : cantidad de números después del punto
+                 int pos_x    : posición en las columnas
+                 int pos_y    : posición en las filas
+   Objetivo    : capturar campo de tipo numérico
+   Retorno     : ---
+*/
+void captureNumericField(float* num, char* tipo, int digits, int precision, int pos_x, int pos_y)
+{
+   int index = 0, n = digits, last = index, flag = FALSE;
+   char key, *str;
+
+   str = (char*)calloc(digits, sizeof(char));
+
+   printf("%s", tipo);
+
+   do {
+
+      showField(str, index, n, pos_x, pos_y);
+
+      do {
+         key = getch();
+      } while (!(key >= '0' && key <= '9') && (key != POINT && !flag) && key != ENTER
+               && key != ESC && key != DERECHA && key != IZQUIERDA && key != BKSP);
+
+      if (key == DERECHA)
+      {
+         if (index < n-1 && index < last)
+            index++;
+      }
+      else if (key == IZQUIERDA)
+      {
+         if (index > 0)
+            index--;
+      }
+      else if (key == POINT)
+      {
+         if (!flag)
+         {
+            *(str+index) = key;
+            index++;
+
+            if (index > last)
+               last = index;
+         }
+      }
+      else
+      {
+         if (key != ENTER && key != ESC)
+         {
+            if (key == BKSP)
+            {
+               if (index)
+               {
+                  index--;
+                  *(str+index) = NULL;
+                  last--;
+               }
+            }
+            else if (index < n)
+            {
+               *(str+index) = key;
+               index++;
+
+               if (index > last)
+                  last = index;
+            }
+         }
+      }
+
+      flag = FALSE;
+
+      for (int count = 0; *(str+count); count++)
+      {
+         if (*(str+count) == POINT)
+         {
+            flag = TRUE;
+            if ( (n - (count+1)) > precision )
+            {
+               n = count+precision+1;
+               clearLine(pos_x, pos_y);
+            }
+            break;
+         }
+      }
+
+      *(str+last) = NULL;
+
+      if (flag)
+         continue;
+      else
+         n = digits;
+
+   } while (key != ENTER && key != ESC);
+
+   *num = strtof(str, NULL);
+
+   clearLine(pos_x, pos_y);
+   gotoxy(pos_x, pos_y);
+   printf("%.2f", *num);
+   printf("\n");
+
+   return;
+}
+
+/*
+   Función     : showField
+   Arrgumentos : char* str : cadena de texto
+                 int pos   : posición del cursor
+                 int n     : longitud de "str"
+                 int x     : posición en x (columnas)
+                 int y     : posición en y (filas)
+   Objetivo    : mostrar el campo de texto
+   Retorno     : ---
+*/
+void showField(char* str, int pos, int n, int x, int y)
+{
+   int index;
+
+   setColor(BLUE, LIGHTGRAY);
+
+   for (index = 0; index < n; index++)
+   {
+      gotoxy(x+index+1, y);
+
+      if (*(str+index))
+         printf("%c", *(str+index));
+      else
+         printf(" ");
+   }
+
+   defaultColor();
+   gotoxy(x+pos+1, y);
+
+   return;
+}
+
+/*
+   Función     : clearLine
+   Arrgumentos : int pos_x: columnas
+                 int pos_y: filas
+   Objetivo    : borrar la línea "line"
+   Retorno     : ---
+*/
+void clearLine(int pos_x, int pos_y)
+{
+   for (pos_x; pos_x <= MAXLINE; pos_x++)
+   {
+      gotoxy(pos_x, pos_y);
+      printf(" ");
+   }
+
+   return;
+}
+
 
 
 
