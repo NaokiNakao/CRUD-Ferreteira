@@ -177,7 +177,8 @@ long fsize(FILE*);
 void opcionesCliente(int, char*);
 void capturarDatosCliente();
 void insertarFrenteCliente(NODOCLIENTE**, CLIENTE);
-int listarClientes(NODOCLIENTE*, int, int, int, int, int);
+int listarClientes(NODOCLIENTE*, int, int, int, int);
+void mostrarClientes(NODOCLIENTE*, int, int, int, int, int, int);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);
@@ -391,6 +392,7 @@ void opcionesCliente(int opcion, char *archivo)
    NODOCLIENTE *listaclientes = NULL, *temp;
    CLIENTE *cliente;
    long cantidad, index;
+   int seleccionar;
    char tecla;
 
    // abriendo el archivo
@@ -443,13 +445,8 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == LEER)
    {
-      temp = listaclientes;
-      while (temp != NULL)
-      {
-         printf("%s %s\n", temp->datos.idcliente, temp->datos.primernomb);
-         temp = temp->siguiente;
-      }
-      getch();
+      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      clrscr();
    }
    else if (opcion == MODIFICAR)
    {
@@ -512,9 +509,121 @@ void insertarFrenteCliente(NODOCLIENTE **cabeza, CLIENTE info)
    return;
 }
 
-int listarClientes(NODOCLIENTE *clientes, int n, int px, int py, int pos, int rango)
+/*
+   Función     : listarClientes
+   Arrgumentos : NODOCLIENTE *clientes: lista donde están almacenados los clientes
+                 int n: cantidad de clientes
+                 int px: posción en x
+                 int py: posición en y
+                 int rango: cantidad de clientes mostrados en el menú de scroll
+   Objetivo    : desplegar un menú con cursor para seleccionar un cliente
+   Retorno     : (int) pos: cliente seleccionado
+*/
+int listarClientes(NODOCLIENTE *clientes, int n, int px, int py, int rango)
 {
+   char tecla;
+   int pos = 0, inf = 0, sup = rango;
 
+   _setcursortype(FALSE);
+
+   do {
+
+      mostrarClientes(clientes, n, px, py, pos, inf, sup);
+
+      do {
+         tecla = getch();
+      } while (tecla != ARRIBA && tecla != ABAJO && tecla != ENTER && tecla != ESC);
+
+      if (tecla != ESC)
+      {
+         if (tecla == ARRIBA)
+         {
+            if (pos != 0)
+            {
+               pos--;
+               if (pos < inf)
+               {
+                  inf--;
+                  sup--;
+               }
+            }
+            else
+            {
+               pos = n-1;
+               sup = n-1;
+               inf = sup-rango;
+            }
+         }
+         else if (tecla == ABAJO)
+         {
+            if (pos < n-1)
+            {
+               pos++;
+               if (pos > sup)
+               {
+                  sup++;
+                  inf++;
+               }
+            }
+            else
+            {
+               pos = 0;
+               inf = 0;
+               sup = rango;
+            }
+         }
+      }
+      else pos = -1;
+
+   } while (tecla != ENTER && tecla != ESC);
+
+   _setcursortype(100);
+
+   return pos;
+}
+
+/*
+   Función     : mostrarClientes
+   Arrgumentos : NODOCLIENTE *clientes: lista donde están almacenados los clientes
+                 int n: cantidad de clientes
+                 int px: posción en x
+                 int py: posición en y
+                 int inf: indica el primer cliente mostrado en la salida
+                 int sup: indica el último cliente mostrado en la salida
+   Objetivo    : mostrar los clientes
+   Retorno     : ---
+*/
+void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, int inf, int sup)
+{
+   NODOCLIENTE *index = clientes;
+   int cont, renglon;
+
+   // se recorre la lista hasta el primer cliente que
+   // se mostrará en el menú de scroll
+   for (cont = 0; cont != inf; cont++)
+      index = index->siguiente;
+
+   gotoxy(px, py);
+   setColor(WHITE, GREEN);
+   printf("           ID                Nombres y apellidos            ");
+   char espacio[] = "                                                            ";
+
+   for (index, cont = inf, renglon = 0; cont <= sup && index != NULL; index = index->siguiente, cont++, renglon++)
+   {
+      gotoxy(px, py+renglon+2);
+      setColor(BLUE, LIGHTGRAY);
+      if (cont == actual)
+         setColor(YELLOW, BLUE);
+      printf("%s", espacio);
+      gotoxy(px+1, py+renglon+2);
+      printf("%s", index->datos.idcliente);
+      gotoxy(px+20, py+renglon+2);
+      printf("%s", index->datos.primernomb);
+   }
+
+   defaultColor();
+
+   return;
 }
 
 /*
