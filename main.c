@@ -179,6 +179,7 @@ void capturarDatosCliente();
 void insertarFrenteCliente(NODOCLIENTE**, CLIENTE);
 int listarClientes(NODOCLIENTE*, int, int, int, int);
 void mostrarClientes(NODOCLIENTE*, int, int, int, int, int, int);
+void eliminarCliente(NODOCLIENTE**, NODOCLIENTE*);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);
@@ -391,8 +392,8 @@ void opcionesCliente(int opcion, char *archivo)
    FILE *pf;
    NODOCLIENTE *listaclientes = NULL, *temp;
    CLIENTE *cliente;
-   long cantidad, index;
-   int seleccionar;
+   long cantidad;
+   int seleccionar, index;
    char tecla;
 
    // abriendo el archivo
@@ -440,6 +441,7 @@ void opcionesCliente(int opcion, char *archivo)
             (*cliente) = temp->datos;
             fwrite(cliente, sizeof(CLIENTE), 1, pf);
          }
+         free(cliente);
          fclose(pf);
       }
    }
@@ -454,7 +456,38 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == BORRAR)
    {
+      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      gotoxy(INIX, INIY+9);
+      printf("%cSeguro que desea eliminar este cliente? S(i) o N(o): ");
+      do {
+         tecla = toupper(getch());
+      } while (tecla != 'S' && tecla != 'N');
 
+      if (tecla == 'S')
+      {
+         temp = listaclientes;
+         for (index = 0; index < seleccionar; index++)
+            temp = temp->siguiente;
+         eliminarCliente(&listaclientes, temp);
+
+         if ((pf = fopen(archivo, "wb")) != NULL)
+         {
+            cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+
+            for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
+            {
+            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+            (*cliente) = temp->datos;
+            fwrite(cliente, sizeof(CLIENTE), 1, pf);
+            }
+            free(cliente);
+            fclose(pf);
+         }
+         gotoxy(INIX, INIY+10);
+         printf("Cliente eliminado.");
+         Sleep(2000);
+      }
+      clrscr();
    }
 
    return;
@@ -605,8 +638,8 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
 
    gotoxy(px, py);
    setColor(WHITE, GREEN);
-   printf("           ID                Nombres y apellidos            ");
-   char espacio[] = "                                                            ";
+   printf("       ID          Nombre y apellido                      ");
+   char espacio[] = "                                                          ";
 
    for (index, cont = inf, renglon = 0; cont <= sup && index != NULL; index = index->siguiente, cont++, renglon++)
    {
@@ -617,11 +650,37 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
       printf("%s", espacio);
       gotoxy(px+1, py+renglon+2);
       printf("%s", index->datos.idcliente);
-      gotoxy(px+20, py+renglon+2);
-      printf("%s", index->datos.primernomb);
+      gotoxy(px+19, py+renglon+2);
+      printf("%s %s", index->datos.primernomb, index->datos.primerapel);
    }
 
    defaultColor();
+
+   return;
+}
+
+/*
+   Función     : eliminarCliente
+   Arrgumentos : NODOCLIENTE **cabeza: referencia a la cabeza de la lista
+                 NODOCLIENTE *elim: nodo de la lista a eliminar
+   Objetivo    : eliminar un cliente
+   Retorno     : ---
+*/
+void eliminarCliente(NODOCLIENTE **cabeza, NODOCLIENTE *elim)
+{
+   if ((*cabeza) == NULL || elim == NULL)
+      return;
+
+   if ((*cabeza) == elim)
+      (*cabeza) = elim->siguiente;
+
+   if (elim->siguiente != NULL)
+      elim->siguiente->anterior = elim->anterior;
+
+   if (elim->anterior != NULL)
+      elim->anterior->siguiente = elim->siguiente;
+
+   free(elim);
 
    return;
 }
