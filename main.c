@@ -33,6 +33,7 @@
 #define MAXIDDEVOLUCION 6
 
 #define IDCLIENTEAUX   "               "
+#define IDEQUIPOAUX    "     "
 
 #define FALSE   0
 #define TRUE    1
@@ -63,6 +64,7 @@
 #define INIX      3
 #define INIY      3
 #define RANGO     4
+#define DELAY    2000
 
 #define AGREGAR     0
 #define LEER        1
@@ -70,6 +72,7 @@
 #define BORRAR      3
 
 #define ARCHCLIENTES   "clientes.txt"
+#define ARCHEQUIPOS    "equipos.txt"
 
 /* Estructuras */
 
@@ -159,13 +162,19 @@ typedef struct{
 
 typedef struct nodocliente {
    CLIENTE datos;
-   struct nodocliente *anterior;
    struct nodocliente *siguiente;
+   struct nodocliente *anterior;
 }NODOCLIENTE;
+
+typedef struct nodoequipo {
+   EQUIPO datos;
+   struct nodoequipo *siguiente;
+   struct nodoequipo *anterior
+}NODOEQUIPO;
 
 /* Prototipos de funciones */
 
-// menús
+// menú
 int seleccionarOpcion(char [][MAXOPC], int, int, int, int);
 void mostrarMenu(char [][MAXOPC], int, int, int, int);
 void setColor(int, int);
@@ -179,16 +188,21 @@ void capturarDatosCliente();
 void insertarFrenteCliente(NODOCLIENTE**, CLIENTE);
 int listarClientes(NODOCLIENTE*, int, int, int, int);
 void mostrarClientes(NODOCLIENTE*, int, int, int, int, int, int);
-void eliminarCliente(NODOCLIENTE**, NODOCLIENTE*);
 void modificarDatosCliente(NODOCLIENTE*, int);
+void eliminarCliente(NODOCLIENTE**, NODOCLIENTE*);
+
+// información sobre equipos en inventario
+void opcionesEquipos(int, char*);
+void capturarDatosEquipo(EQUIPO*);
+void insertarFrenteEquipo(NODOEQUIPO**, EQUIPO);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);
 int strEnd(char*);
 void captureDateField(char*, int, int, int);
 int validDate(char*, int*, int*, int*);
-void captureIntegerField(int*, char*, int, int, int);
-void captureNumericField(float*, char*, int, int, int, int);
+void captureIntegerField(int*, int, int, int);
+void captureNumericField(float*, int, int, int, int);
 void showField(char*, int, int, int, int);
 void clearLine(int, int);
 
@@ -235,6 +249,11 @@ int main()
       if (opcionini == 0)
       {
          opcionesCliente(opcioncrud, ARCHCLIENTES);
+      }
+      // equipos en inventario
+      else if (opcionini == 6)
+      {
+         opcionesEquipos(opcioncrud, ARCHEQUIPOS);
       }
    }
 
@@ -411,6 +430,13 @@ void opcionesCliente(int opcion, char *archivo)
       free(cliente);
       fclose(pf);
    }
+   else if (opcion != AGREGAR)
+   {
+      puts("No hay clientes agregados.");
+      Sleep(DELAY);
+      clrscr();
+      return;
+   }
 
    if (opcion == AGREGAR)
    {
@@ -430,20 +456,6 @@ void opcionesCliente(int opcion, char *archivo)
          clrscr();
 
       } while (tecla != 'N');
-
-      /*if ((pf = fopen(archivo, "wb")) != NULL)
-      {
-         cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
-
-         for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
-         {
-            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
-            (*cliente) = temp->datos;
-            fwrite(cliente, sizeof(CLIENTE), 1, pf);
-         }
-         free(cliente);
-         fclose(pf);
-      }*/
    }
    else if (opcion == LEER)
    {
@@ -481,20 +493,6 @@ void opcionesCliente(int opcion, char *archivo)
             clrscr();
 
          } while (camposel != EXIT);
-
-         /*if ((pf = fopen(archivo, "wb")) != NULL)
-         {
-            cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
-
-            for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
-            {
-               fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
-               (*cliente) = temp->datos;
-               fwrite(cliente, sizeof(CLIENTE), 1, pf);
-            }
-            free(cliente);
-            fclose(pf);
-         }*/
       }
       else clrscr();
    }
@@ -514,26 +512,15 @@ void opcionesCliente(int opcion, char *archivo)
             temp = temp->siguiente;
          eliminarCliente(&listaclientes, temp);
 
-         /*if ((pf = fopen(archivo, "wb")) != NULL)
-         {
-            cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
-
-            for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
-            {
-               fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
-               (*cliente) = temp->datos;
-               fwrite(cliente, sizeof(CLIENTE), 1, pf);
-            }
-            free(cliente);
-            fclose(pf);
-         }*/
          gotoxy(INIX, INIY+10);
          printf("Cliente eliminado.");
-         Sleep(2000);
+         Sleep(DELAY);
       }
       clrscr();
    }
 
+   // sobreescribiendo el archivo si la opción seleccionada fue
+   // para agregar, modificar o borrar clientes
    if (opcion != LEER)
    {
       if ((pf = fopen(archivo, "wb")) != NULL)
@@ -699,7 +686,7 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
 
    gotoxy(px, py);
    setColor(WHITE, GREEN);
-   printf("       ID          Nombre y apellido                      ");
+   printf("       ID          Nombre completo                        ");
    char espacio[] = "                                                          ";
 
    for (index, cont = inf, renglon = 0; cont <= sup && index != NULL; index = index->siguiente, cont++, renglon++)
@@ -712,7 +699,11 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
       gotoxy(px+1, py+renglon+2);
       printf("%s", index->datos.idcliente);
       gotoxy(px+19, py+renglon+2);
-      printf("%s %s", index->datos.primernomb, index->datos.primerapel);
+      printf("%s", index->datos.primernomb);
+      if (index->datos.segnomb[0] != NULL)
+         printf(" %c.", index->datos.segnomb[0]);
+      printf(" %s", index->datos.primerapel);
+      printf(" %s", index->datos.segapel);
    }
 
    defaultColor();
@@ -721,31 +712,12 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
 }
 
 /*
-   Función     : eliminarCliente
-   Arrgumentos : NODOCLIENTE **cabeza: referencia a la cabeza de la lista
-                 NODOCLIENTE *elim: nodo de la lista a eliminar
-   Objetivo    : eliminar un cliente
+   Función     : modificarDatosCliente
+   Arrgumentos : NODOCLIENTE *cliente: regerencia del cliente
+                 int campo: indica el campo que se va a modificar
+   Objetivo    : modificar un campo en la información del cliente
    Retorno     : ---
 */
-void eliminarCliente(NODOCLIENTE **cabeza, NODOCLIENTE *elim)
-{
-   if ((*cabeza) == NULL || elim == NULL)
-      return;
-
-   if ((*cabeza) == elim)
-      (*cabeza) = elim->siguiente;
-
-   if (elim->siguiente != NULL)
-      elim->siguiente->anterior = elim->anterior;
-
-   if (elim->anterior != NULL)
-      elim->anterior->siguiente = elim->siguiente;
-
-   free(elim);
-
-   return;
-}
-
 void modificarDatosCliente(NODOCLIENTE *cliente, int campo)
 {
    int px = INIX+17, py = INIY+2+campo;
@@ -778,6 +750,159 @@ void modificarDatosCliente(NODOCLIENTE *cliente, int campo)
    {
       captureTextField(cliente->datos.direccion, LENDIR, px, py, FALSE, FALSE);
    }
+
+   return;
+}
+
+/*
+   Función     : eliminarCliente
+   Arrgumentos : NODOCLIENTE **cabeza: referencia a la cabeza de la lista
+                 NODOCLIENTE *elim: nodo de la lista a eliminar
+   Objetivo    : eliminar un cliente
+   Retorno     : ---
+*/
+void eliminarCliente(NODOCLIENTE **cabeza, NODOCLIENTE *elim)
+{
+   if ((*cabeza) == NULL || elim == NULL)
+      return;
+
+   if ((*cabeza) == elim)
+      (*cabeza) = elim->siguiente;
+
+   if (elim->siguiente != NULL)
+      elim->siguiente->anterior = elim->anterior;
+
+   if (elim->anterior != NULL)
+      elim->anterior->siguiente = elim->siguiente;
+
+   free(elim);
+
+   return;
+}
+
+/*
+   Función   : opcionesEquipos
+   Argumentos: int opcion: indica la acción a realizar
+               char *archivo: nombre del archivo donde se encuentran los datos
+   Objetivo  : agregar, leer, modificar o borrar datos de los equipos
+   Retorno   : ---
+*/
+void opcionesEquipos(int opcion, char *archivo)
+{
+   FILE *pf;
+   NODOEQUIPO *cabeza = NULL, *temp;
+   EQUIPO *equipo;
+   long cantidad;
+   int seleccionar, index;
+   char tecla;
+
+   // abriendo el archivo
+   if ((pf = fopen(archivo, "rb")) != NULL)
+   {
+      cantidad = fsize(pf)/sizeof(EQUIPO);
+      equipo = (EQUIPO*)malloc(sizeof(EQUIPO));
+
+      for (index = 0; index < cantidad; index++)
+      {
+         fseek(pf, index*sizeof(EQUIPO), SEEK_SET);
+         fread(equipo, sizeof(EQUIPO), 1, pf);
+         insertarFrenteEquipo(&cabeza, *equipo);
+      }
+      free(equipo);
+      fclose(pf);
+   }
+   else if (opcion != AGREGAR)
+   {
+      puts("No hay equipos agregados.");
+      Sleep(DELAY);
+      clrscr();
+      return;
+   }
+
+   if (opcion == AGREGAR)
+   {
+      do {
+
+         equipo = (EQUIPO*)calloc(1, sizeof(EQUIPO));
+         printf("Digite los datos del equipo:\n\n");
+         capturarDatosEquipo(equipo);
+         insertarFrenteEquipo(&cabeza, *equipo);
+         free(equipo);
+
+         printf("\n\n%cDesea agregar otro equipo? S(i) o N(o): ", 168);
+         do {
+            tecla = toupper(getch());
+         } while (tecla != 'S' && tecla != 'N');
+
+         clrscr();
+
+      } while (tecla != 'N');
+   }
+
+    if (opcion != LEER)
+   {
+      if ((pf = fopen(archivo, "wb")) != NULL)
+      {
+         equipo = (EQUIPO*)calloc(1, sizeof(EQUIPO));
+
+         for (temp = cabeza, index = 0; temp != NULL; temp = temp->siguiente, index++)
+         {
+            fseek(pf, index*sizeof(EQUIPO), SEEK_SET);
+            (*equipo) = temp->datos;
+            fwrite(equipo, sizeof(EQUIPO), 1, pf);
+         }
+         free(equipo);
+         fclose(pf);
+      }
+   }
+
+   return;
+}
+
+/*
+   Función     : capturarDatosEquipo
+   Arrgumentos : EQUIPO *equipo: referencia donde se almacenarán los datos
+   Objetivo    : capturar los datos de un equipo
+   Retorno     : ---
+*/
+void capturarDatosEquipo(EQUIPO *equipo)
+{
+   printf("Nombre del equipo: ");
+   captureTextField(equipo->descripcion, LENDESC, 19, 3, FALSE, FALSE);
+   printf("Cantidad en inventario: ");
+   captureIntegerField(&equipo->cantinventario, 10, 24, 4);
+   printf("Precio de pr%cstamo: ", 130);
+   captureNumericField(&equipo->precioprestamo, 10, 2, 20, 5);
+   printf("Precio de venta: ");
+   captureNumericField(&equipo->costoequipo, 10, 2, 17, 6);
+
+   // la cantidad de equipos prestados inicia en 0
+   equipo->cantprestados = 0;
+
+   // generando un ID para el equipo
+   randomString(equipo->idequipo, IDEQUIPOAUX, INFNUM, SUPNUM);
+
+   return;
+}
+
+/*
+   Función     : insertarFrenteEquipo
+   Arrgumentos : NODOEQUIPO **cabeza: cabeza de la lista
+                 EQUIPO info: nueva infromación
+   Objetivo    : insertar información de equipos al inicio de la lista
+   Retorno     : ---
+*/
+void insertarFrenteEquipo(NODOEQUIPO **cabeza, EQUIPO info)
+{
+   NODOEQUIPO *nuevo = (NODOEQUIPO*)malloc(sizeof(NODOEQUIPO));
+   nuevo->datos = info;
+   nuevo->siguiente = (*cabeza);
+   nuevo->anterior = NULL;
+
+   if ((*cabeza) != NULL)
+      (*cabeza)->anterior = nuevo;
+
+   (*cabeza) = nuevo;
 
    return;
 }
@@ -1023,14 +1148,12 @@ int validDate(char* date, int* day, int* month, int* year)
    Objetivo    : capturar campo de tipo numérico
    Retorno     : ---
 */
-void captureIntegerField(int* num, char* tipo, int digits, int pos_x, int pos_y)
+void captureIntegerField(int* num, int digits, int pos_x, int pos_y)
 {
    int index = 0, n = digits, last = index;
    char key, *str;
 
    str = (char*)calloc(digits, sizeof(char));
-
-   printf("%s", tipo);
 
    do {
 
@@ -1083,7 +1206,7 @@ void captureIntegerField(int* num, char* tipo, int digits, int pos_x, int pos_y)
 
    clearLine(pos_x, pos_y);
    gotoxy(pos_x, pos_y);
-   printf("%d", *num);
+   printf(" %d", *num);
    printf("\n");
 
    return;
@@ -1099,14 +1222,12 @@ void captureIntegerField(int* num, char* tipo, int digits, int pos_x, int pos_y)
    Objetivo    : capturar campo de tipo numérico
    Retorno     : ---
 */
-void captureNumericField(float* num, char* tipo, int digits, int precision, int pos_x, int pos_y)
+void captureNumericField(float* num, int digits, int precision, int pos_x, int pos_y)
 {
    int index = 0, n = digits, last = index, flag = FALSE;
    char key, *str;
 
    str = (char*)calloc(digits, sizeof(char));
-
-   printf("%s", tipo);
 
    do {
 
@@ -1191,7 +1312,7 @@ void captureNumericField(float* num, char* tipo, int digits, int precision, int 
 
    clearLine(pos_x, pos_y);
    gotoxy(pos_x, pos_y);
-   printf("%.2f", *num);
+   printf(" %.2f", *num);
    printf("\n");
 
    return;
