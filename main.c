@@ -180,10 +180,10 @@ void insertarFrenteCliente(NODOCLIENTE**, CLIENTE);
 int listarClientes(NODOCLIENTE*, int, int, int, int);
 void mostrarClientes(NODOCLIENTE*, int, int, int, int, int, int);
 void eliminarCliente(NODOCLIENTE**, NODOCLIENTE*);
+void modificarDatosCliente(NODOCLIENTE*, int);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);
-int validSep(char*, int);
 int strEnd(char*);
 void captureDateField(char*, int, int, int);
 int validDate(char*, int*, int*, int*);
@@ -431,7 +431,7 @@ void opcionesCliente(int opcion, char *archivo)
 
       } while (tecla != 'N');
 
-      if ((pf = fopen(archivo, "wb")) != NULL)
+      /*if ((pf = fopen(archivo, "wb")) != NULL)
       {
          cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
 
@@ -443,7 +443,7 @@ void opcionesCliente(int opcion, char *archivo)
          }
          free(cliente);
          fclose(pf);
-      }
+      }*/
    }
    else if (opcion == LEER)
    {
@@ -452,7 +452,51 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == MODIFICAR)
    {
+      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      clrscr();
 
+      temp = listaclientes;
+      for (index = 0; index < seleccionar; index++)
+         temp = temp->siguiente;
+
+      if (seleccionar != EXIT)
+      {
+         char campos[][MAXOPC] = {"ID cliente      ",
+                                  "Primer nombre   ",
+                                  "Segundo nombre  ",
+                                  "Primer apellido ",
+                                  "Segundo apellido",
+                                  "ID documento    ",
+                                  "Direccion       "};
+         int camposel;
+
+         do {
+
+            gotoxy(INIX, INIY);
+            printf("Seleccione un campo");
+            gotoxy(INIX, INIY+10);
+            printf("Presione [ESC] para salir");
+            camposel = seleccionarOpcion(campos, 7, INIX, INIY+2, 0);
+            modificarDatosCliente(temp, camposel);
+            clrscr();
+
+         } while (camposel != EXIT);
+
+         /*if ((pf = fopen(archivo, "wb")) != NULL)
+         {
+            cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+
+            for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
+            {
+               fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+               (*cliente) = temp->datos;
+               fwrite(cliente, sizeof(CLIENTE), 1, pf);
+            }
+            free(cliente);
+            fclose(pf);
+         }*/
+      }
+      else clrscr();
    }
    else if (opcion == BORRAR)
    {
@@ -470,24 +514,41 @@ void opcionesCliente(int opcion, char *archivo)
             temp = temp->siguiente;
          eliminarCliente(&listaclientes, temp);
 
-         if ((pf = fopen(archivo, "wb")) != NULL)
+         /*if ((pf = fopen(archivo, "wb")) != NULL)
          {
             cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
 
             for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
             {
-            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
-            (*cliente) = temp->datos;
-            fwrite(cliente, sizeof(CLIENTE), 1, pf);
+               fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+               (*cliente) = temp->datos;
+               fwrite(cliente, sizeof(CLIENTE), 1, pf);
             }
             free(cliente);
             fclose(pf);
-         }
+         }*/
          gotoxy(INIX, INIY+10);
          printf("Cliente eliminado.");
          Sleep(2000);
       }
       clrscr();
+   }
+
+   if (opcion != LEER)
+   {
+      if ((pf = fopen(archivo, "wb")) != NULL)
+      {
+         cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+
+         for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
+         {
+            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+            (*cliente) = temp->datos;
+            fwrite(cliente, sizeof(CLIENTE), 1, pf);
+         }
+         free(cliente);
+         fclose(pf);
+      }
    }
 
    return;
@@ -606,7 +667,7 @@ int listarClientes(NODOCLIENTE *clientes, int n, int px, int py, int rango)
             }
          }
       }
-      else pos = -1;
+      else pos = EXIT;
 
    } while (tecla != ENTER && tecla != ESC);
 
@@ -685,6 +746,42 @@ void eliminarCliente(NODOCLIENTE **cabeza, NODOCLIENTE *elim)
    return;
 }
 
+void modificarDatosCliente(NODOCLIENTE *cliente, int campo)
+{
+   int px = INIX+17, py = INIY+2+campo;
+
+   if (campo == 0)
+   {
+      captureTextField(cliente->datos.idcliente, MAXIDCLIENTE, px, py, FALSE, TRUE);
+   }
+   else if (campo == 1)
+   {
+      captureTextField(cliente->datos.primernomb, LENPRINOMBRE, px, py, FALSE, FALSE);
+   }
+   else if (campo == 2)
+   {
+      captureTextField(cliente->datos.segnomb, LENSEGNOMBRE, px, py, FALSE, FALSE);
+   }
+   else if (campo == 3)
+   {
+      captureTextField(cliente->datos.primerapel, LENPRIAPEL, px, py, FALSE, FALSE);
+   }
+   else if (campo == 4)
+   {
+      captureTextField(cliente->datos.segapel, LENSEGAPEL, px, py, FALSE, FALSE);
+   }
+   else if (campo == 5)
+   {
+      captureTextField(cliente->datos.docid, MAXID, px, py, FALSE, TRUE);
+   }
+   else if (campo == 6)
+   {
+      captureTextField(cliente->datos.direccion, LENDIR, px, py, FALSE, FALSE);
+   }
+
+   return;
+}
+
 /*
    Función     : captureTextField
    Arrgumentos : char* str    : cadena de texto a capturar
@@ -699,8 +796,11 @@ void eliminarCliente(NODOCLIENTE **cabeza, NODOCLIENTE *elim)
 */
 void captureTextField(char* str, int n, int pos_x, int pos_y, int flag, int alfanumeric)
 {
-   int index = 0, last = index;
+   int index, last;
    char key, temp[n];
+
+   for (index = 0; *(str+index) != NULL; index++);
+   last = index;
 
    do {
 
@@ -777,21 +877,6 @@ void captureTextField(char* str, int n, int pos_x, int pos_y, int flag, int alfa
    printf("\n");
 
    return;
-}
-
-/*
-   Función     : validSep
-   Arrgumentos : char* str : cadena de texto
-                 int pos   : posición del cursor
-   Objetivo    : confirmar si la separación entre letras es válida
-   Retorno     : (int) 1 si la separación es válida; (int) 0 en caso contrario
-*/
-int validSep(char* str, int pos)
-{
-   if ( !(strncmp(str+pos-2, "  ", 2)) || !(strncmp(str+pos, "  ", 2)) )
-      return FALSE;
-   else
-      return TRUE;
 }
 
 /*
