@@ -32,6 +32,8 @@
 #define MAXTIPOFACT 9
 #define MAXIDDEVOLUCION 6
 
+#define IDCLIENTEAUX   "               "
+
 #define FALSE   0
 #define TRUE    1
 
@@ -60,13 +62,14 @@
 #define MAXOPC   30
 #define INIX      3
 #define INIY      3
+#define RANGO     4
 
 #define AGREGAR     0
 #define LEER        1
 #define MODIFICAR   2
 #define BORRAR      3
 
-#define ARCHCLIENTES   "clientes.dat"
+#define ARCHCLIENTES   "clientes.txt"
 
 /* Estructuras */
 
@@ -167,10 +170,14 @@ int seleccionarOpcion(char [][MAXOPC], int, int, int, int);
 void mostrarMenu(char [][MAXOPC], int, int, int, int);
 void setColor(int, int);
 void defaultColor();
+void randomString(char*, char*, int, int);
+long fsize(FILE*);
 
 // datos de clientes
 void opcionesCliente(int, char*);
 void capturarDatosCliente();
+void insertarFrenteCliente(NODOCLIENTE**, CLIENTE);
+int listarClientes(NODOCLIENTE*, int, int, int, int, int);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);
@@ -192,6 +199,8 @@ void clearLine(int, int);
 
 int main()
 {
+   srand(time(NULL));
+
    char menuinicio[][MAXOPC] = {"Datos de clientes       ",
                                 "Proyectos               ",
                                 "Cuentas de clientes     ",
@@ -332,6 +341,44 @@ void defaultColor()
 }
 
 /*
+   Función   : randomString
+   Argumentos: char *destino: cadena de destino
+               char *aux: cadena auxiliar con espacios en blanco
+               int inf: valor mínimo para el caracter
+               int sup: valor máximo para el caracter
+   Objetivo  : agregar caracteres aleatorios a "destino"
+   Retorno   : ---
+*/
+void randomString(char *destino, char *aux, int inf, int sup)
+{
+   int index;
+
+   strcpy(destino, aux);
+
+   for (index = 0; *(destino+index) != NULL; index++)
+      destino[index] = (rand() % (sup-inf+1)) + inf;
+
+   return;
+}
+
+/*
+   Función   : fsize
+   Argumentos: FILE *pf: referencia del archivo
+   Objetivo  : calcular la longitud en bytes de "pf"
+   Retorno   : (long) cantbytes
+*/
+long fsize(FILE *pf)
+{
+   long posarch = ftell(pf), cantbytes;
+
+   fseek(pf,0L,SEEK_END);
+   cantbytes = ftell(pf);
+   fseek(pf,posarch,SEEK_SET);
+
+   return cantbytes;
+}
+
+/*
    Función   : opcionesCliente
    Argumentos: int opcion: indica la acción a realizar
                char *archivo: nombre del archivo donde se encuentran los datos
@@ -341,20 +388,68 @@ void defaultColor()
 void opcionesCliente(int opcion, char *archivo)
 {
    FILE *pf;
-   NODOCLIENTE *clientes = NULL;
+   NODOCLIENTE *listaclientes = NULL, *temp;
    CLIENTE *cliente;
-   int cantidad;
+   long cantidad, index;
+   char tecla;
+
+   // abriendo el archivo
+   if ((pf = fopen(archivo, "rb")) != NULL)
+   {
+      cantidad = fsize(pf)/sizeof(CLIENTE);
+      cliente = (CLIENTE*)malloc(sizeof(CLIENTE));
+
+      for (index = 0; index < cantidad; index++)
+      {
+         fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+         fread(cliente, sizeof(CLIENTE), 1, pf);
+         insertarFrenteCliente(&listaclientes, *cliente);
+      }
+      free(cliente);
+      fclose(pf);
+   }
 
    if (opcion == AGREGAR)
    {
-      cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
-      printf("Digite los datos del cliente:\n\n");
-      capturarDatosCliente(cliente);
-      free(cliente);
+      do {
+
+         cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+         printf("Digite los datos del cliente: \n\n");
+         capturarDatosCliente(cliente);
+         insertarFrenteCliente(&listaclientes, *cliente);
+         free(cliente);
+
+         printf("\n\n%cDesea agregar otro cliente? S(i) o N(o): ", 168);
+         do {
+            tecla = toupper(getch());
+         } while (tecla != 'S' && tecla != 'N');
+
+         clrscr();
+
+      } while (tecla != 'N');
+
+      if ((pf = fopen(archivo, "wb")) != NULL)
+      {
+         cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+
+         for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
+         {
+            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
+            (*cliente) = temp->datos;
+            fwrite(cliente, sizeof(CLIENTE), 1, pf);
+         }
+         fclose(pf);
+      }
    }
    else if (opcion == LEER)
    {
-
+      temp = listaclientes;
+      while (temp != NULL)
+      {
+         printf("%s %s\n", temp->datos.idcliente, temp->datos.primernomb);
+         temp = temp->siguiente;
+      }
+      getch();
    }
    else if (opcion == MODIFICAR)
    {
@@ -385,9 +480,41 @@ void capturarDatosCliente(CLIENTE *cliente)
    printf("Segundo apellido: ");
    captureTextField(cliente->segapel, LENSEGAPEL, 18, 6, FALSE, FALSE);
    printf("ID documento: ");
-   captureTextField(cliente->docid, MAXID, 14, 7, TRUE, FALSE);
+   captureTextField(cliente->docid, MAXID, 14, 7, TRUE, TRUE);
    printf("Direcci%cn: ", 162);
    captureTextField(cliente->direccion, LENDIR, 11, 8, FALSE, FALSE);
+
+   // generando un id para el cliente
+   randomString(cliente->idcliente, IDCLIENTEAUX, INFNUM, SUPNUM);
+
+   return;
+}
+
+/*
+   Función     : insertarFrenteCliente
+   Arrgumentos : NODOCLIENTE **cabeza: cabeza de la lista
+                 CLIENTE info: nueva infromación
+   Objetivo    : insertar información de clientes al inicio de la lista
+   Retorno     : ---
+*/
+void insertarFrenteCliente(NODOCLIENTE **cabeza, CLIENTE info)
+{
+   NODOCLIENTE *nuevo = (NODOCLIENTE*)malloc(sizeof(NODOCLIENTE));
+   nuevo->datos = info;
+   nuevo->siguiente = (*cabeza);
+   nuevo->anterior = NULL;
+
+   if ((*cabeza) != NULL)
+      (*cabeza)->anterior = nuevo;
+
+   (*cabeza) = nuevo;
+
+   return;
+}
+
+int listarClientes(NODOCLIENTE *clientes, int n, int px, int py, int pos, int rango)
+{
+
 }
 
 /*
