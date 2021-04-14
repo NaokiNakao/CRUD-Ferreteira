@@ -73,8 +73,8 @@
 #define MODIFICAR   2
 #define BORRAR      3
 
-#define ARCHCLIENTES   "clientes.txt"
-#define ARCHEQUIPOS    "equipos.txt"
+#define ARCHCLIENTES   "clientes.dat"
+#define ARCHEQUIPOS    "equipos.dat"
 
 /* Estructuras */
 

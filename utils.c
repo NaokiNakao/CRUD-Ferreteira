@@ -174,7 +174,6 @@ void opcionesCliente(int opcion, char *archivo)
 
       for (index = 0; index < cantidad; index++)
       {
-         fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
          fread(cliente, sizeof(CLIENTE), 1, pf);
          insertarFrenteCliente(&listaclientes, *cliente);
       }
@@ -280,7 +279,6 @@ void opcionesCliente(int opcion, char *archivo)
 
          for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
          {
-            fseek(pf, index*sizeof(CLIENTE), SEEK_SET);
             (*cliente) = temp->datos;
             fwrite(cliente, sizeof(CLIENTE), 1, pf);
          }
@@ -432,8 +430,9 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
 
    // se recorre la lista hasta el primer cliente que
    // se mostrará en el menú de scroll
-   for (cont = 0; cont != inf; cont++)
-      index = index->siguiente;
+   if (sup >= n-1)
+      for (cont = 0; cont != inf; cont++)
+         index = index->siguiente;
 
    gotoxy(px, py);
    setColor(WHITE, GREEN);
