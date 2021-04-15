@@ -197,6 +197,8 @@ void eliminarCliente(NODOCLIENTE**, NODOCLIENTE*);
 void opcionesEquipos(int, char*);
 void capturarDatosEquipo(EQUIPO*);
 void insertarFrenteEquipo(NODOEQUIPO**, EQUIPO);
+int listarEquipos(NODOEQUIPO*, int, int, int, int);
+void mostrarEquipos(NODOEQUIPO*, int, int, int, int, int, int);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);

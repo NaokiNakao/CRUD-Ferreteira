@@ -160,7 +160,7 @@ long fsize(FILE *pf)
 void opcionesCliente(int opcion, char *archivo)
 {
    FILE *pf;
-   NODOCLIENTE *listaclientes = NULL, *temp;
+   NODOCLIENTE *cabeza = NULL, *temp;
    CLIENTE *cliente;
    long cantidad;
    int seleccionar, index;
@@ -175,7 +175,7 @@ void opcionesCliente(int opcion, char *archivo)
       for (index = 0; index < cantidad; index++)
       {
          fread(cliente, sizeof(CLIENTE), 1, pf);
-         insertarFrenteCliente(&listaclientes, *cliente);
+         insertarFrenteCliente(&cabeza, *cliente);
       }
       free(cliente);
       fclose(pf);
@@ -195,7 +195,7 @@ void opcionesCliente(int opcion, char *archivo)
          cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
          printf("Digite los datos del cliente: \n\n");
          capturarDatosCliente(cliente);
-         insertarFrenteCliente(&listaclientes, *cliente);
+         insertarFrenteCliente(&cabeza, *cliente);
          free(cliente);
 
          printf("\n\n%cDesea agregar otro cliente? S(i) o N(o): ", 168);
@@ -209,15 +209,15 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == LEER)
    {
-      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
       clrscr();
    }
    else if (opcion == MODIFICAR)
    {
-      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
       clrscr();
 
-      temp = listaclientes;
+      temp = cabeza;
       for (index = 0; index < seleccionar; index++)
          temp = temp->siguiente;
 
@@ -248,7 +248,7 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == BORRAR)
    {
-      seleccionar = listarClientes(listaclientes, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
       gotoxy(INIX, INIY+9);
       printf("%cSeguro que desea eliminar este cliente? S(i) o N(o): ");
       do {
@@ -257,10 +257,10 @@ void opcionesCliente(int opcion, char *archivo)
 
       if (tecla == 'S')
       {
-         temp = listaclientes;
+         temp = cabeza;
          for (index = 0; index < seleccionar; index++)
             temp = temp->siguiente;
-         eliminarCliente(&listaclientes, temp);
+         eliminarCliente(&cabeza, temp);
 
          gotoxy(INIX, INIY+10);
          printf("Cliente eliminado.");
@@ -275,9 +275,9 @@ void opcionesCliente(int opcion, char *archivo)
    {
       if ((pf = fopen(archivo, "wb")) != NULL)
       {
-         cliente = (CLIENTE*)calloc(1, sizeof(CLIENTE));
+         cliente = (CLIENTE*)malloc(sizeof(CLIENTE));
 
-         for (temp = listaclientes, index = 0; temp != NULL; temp = temp->siguiente, index++)
+         for (temp = cabeza, index = 0; temp != NULL; temp = temp->siguiente, index++)
          {
             (*cliente) = temp->datos;
             fwrite(cliente, sizeof(CLIENTE), 1, pf);
@@ -430,9 +430,8 @@ void mostrarClientes(NODOCLIENTE *clientes, int n, int px, int py, int actual, i
 
    // se recorre la lista hasta el primer cliente que
    // se mostrará en el menú de scroll
-   if (sup >= n-1)
-      for (cont = 0; cont != inf; cont++)
-         index = index->siguiente;
+   for (cont = 0; cont != inf; cont++)
+      index = index->siguiente;
 
    gotoxy(px, py);
    setColor(WHITE, GREEN);
@@ -588,12 +587,17 @@ void opcionesEquipos(int opcion, char *archivo)
 
       } while (tecla != 'N');
    }
+   else if (opcion == LEER)
+   {
+      seleccionar = listarEquipos(cabeza, cantidad, INIX, INIY, RANGO);
+      clrscr();
+   }
 
     if (opcion != LEER)
    {
       if ((pf = fopen(archivo, "wb")) != NULL)
       {
-         equipo = (EQUIPO*)calloc(1, sizeof(EQUIPO));
+         equipo = (EQUIPO*)malloc(sizeof(EQUIPO));
 
          for (temp = cabeza, index = 0; temp != NULL; temp = temp->siguiente, index++)
          {
@@ -653,6 +657,131 @@ void insertarFrenteEquipo(NODOEQUIPO **cabeza, EQUIPO info)
       (*cabeza)->anterior = nuevo;
 
    (*cabeza) = nuevo;
+
+   return;
+}
+
+/*
+   Función     : listarEquipos
+   Arrgumentos : NODOEQUIPO *equipos: lista donde están almacenados los equipos
+                 int n: cantidad de clientes
+                 int px: posción en x
+                 int py: posición en y
+                 int rango: cantidad de equipos mostrados en el menú de scroll
+   Objetivo    : desplegar un menú con cursor para seleccionar un equipo
+   Retorno     : (int) pos: equipo seleccionado
+*/
+int listarEquipos(NODOEQUIPO *equipos, int n, int px, int py, int rango)
+{
+   char tecla;
+   int pos = 0, inf = 0, sup = rango;
+
+   _setcursortype(FALSE);
+
+   do {
+
+      mostrarEquipos(equipos, n, px, py, pos, inf, sup);
+
+      do {
+         tecla = getch();
+      } while (tecla != ARRIBA && tecla != ABAJO && tecla != ENTER && tecla != ESC);
+
+      if (tecla != ESC)
+      {
+         if (tecla == ARRIBA)
+         {
+            if (pos != 0)
+            {
+               pos--;
+               if (pos < inf)
+               {
+                  inf--;
+                  sup--;
+               }
+            }
+            else
+            {
+               pos = n-1;
+               sup = n-1;
+               inf = sup-rango;
+            }
+         }
+         else if (tecla == ABAJO)
+         {
+            if (pos < n-1)
+            {
+               pos++;
+               if (pos > sup)
+               {
+                  sup++;
+                  inf++;
+               }
+            }
+            else
+            {
+               pos = 0;
+               inf = 0;
+               sup = rango;
+            }
+         }
+      }
+      else pos = EXIT;
+
+   } while (tecla != ENTER && tecla != ESC);
+
+   _setcursortype(100);
+
+   return pos;
+}
+
+/*
+   Función     : mostrarEquipos
+   Arrgumentos : NODOEQUIPO *equipos: lista donde están almacenados los equipos
+                 int n: cantidad de clientes
+                 int px: posción en x
+                 int py: posición en y
+                 int inf: indica el primer equipo mostrado en la salida
+                 int sup: indica el último equipo mostrado en la salida
+   Objetivo    : mostrar los equipos
+   Retorno     : ---
+*/
+void mostrarEquipos(NODOEQUIPO *equipos, int n, int px, int py, int actual, int inf, int sup)
+{
+   NODOEQUIPO *index = equipos;
+   int cont, renglon;
+
+   // se recorre la lista hasta el primer cliente que
+   // se mostrará en el menú de scroll
+   for (cont = 0; cont != inf; cont++)
+      index = index->siguiente;
+
+   gotoxy(px, py);
+   setColor(WHITE, GREEN);
+   printf("   ID    Descripci%cn            Inventario   Alquilados   Pr%cstamo   Costo        ", 162, 130);
+   char espacio[] = "                                                                                  ";
+
+   for (index, cont = inf, renglon = 0; cont <= sup && index != NULL; index = index->siguiente, cont++, renglon++)
+   {
+      gotoxy(px, py+renglon+2);
+      setColor(BLUE, LIGHTGRAY);
+      if (cont == actual)
+         setColor(YELLOW, BLUE);
+      printf("%s", espacio);
+      gotoxy(px+1, py+renglon+2);
+      printf("%s", index->datos.idequipo);
+      gotoxy(px+9, py+renglon+2);
+      printf("%s", index->datos.descripcion);
+      gotoxy(px+32, py+renglon+2);
+      printf("%d", index->datos.cantinventario);
+      gotoxy(px+45, py+renglon+2);
+      printf("%d", index->datos.cantprestados);
+      gotoxy(px+58, py+renglon+2);
+      printf("%.2f", index->datos.precioprestamo);
+      gotoxy(px+69, py+renglon+2);
+      printf("%.2f", index->datos.costoequipo);
+   }
+
+   defaultColor();
 
    return;
 }

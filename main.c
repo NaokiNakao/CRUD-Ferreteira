@@ -8,6 +8,7 @@
    Fecha: en curso
 */
 
+#include <stdio.h>
 #include "utils.h"
 
 int main()
@@ -15,12 +16,12 @@ int main()
    srand(time(NULL));
 
    char menuinicio[][MAXOPC] = {"Datos de clientes       ",
+                                "Equipos en inventario   ",
                                 "Proyectos               ",
                                 "Cuentas de clientes     ",
                                 "Propuestas de contrato  ",
                                 "Despacho                ",
                                 "Conteo                  ",
-                                "Equipos en inventario   ",
                                 "Devolucion de equipos   ",
                                 "Equipo perdido          ",
                                 "Facturas de continuacion",
@@ -48,7 +49,7 @@ int main()
          opcionesCliente(opcioncrud, ARCHCLIENTES);
       }
       // equipos en inventario
-      else if (opcionini == 6)
+      else if (opcionini == 1)
       {
          opcionesEquipos(opcioncrud, ARCHEQUIPOS);
       }
