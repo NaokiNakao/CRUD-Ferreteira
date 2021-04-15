@@ -592,8 +592,40 @@ void opcionesEquipos(int opcion, char *archivo)
       seleccionar = listarEquipos(cabeza, cantidad, INIX, INIY, RANGO);
       clrscr();
    }
+   else if (opcion == MODIFICAR)
+   {
+      seleccionar = listarEquipos(cabeza, cantidad, INIX, INIY, RANGO);
+      clrscr();
 
-    if (opcion != LEER)
+      if (seleccionar != EXIT)
+      {
+         temp = cabeza;
+         for (index = 0; index < seleccionar; index++)
+            temp = temp->siguiente;
+
+         char campos[][MAXOPC] = {"ID del equipo         ",
+                                  "Nombre                ",
+                                  "Cantidad en inventario",
+                                  "Precio de alquiler    ",
+                                  "Costo de venta        ",};
+         int camposel;
+
+         do {
+
+            gotoxy(INIX, INIY);
+            printf("Seleccione un campo");
+            gotoxy(INIX, INIY+10);
+            printf("Presione [ESC] para salir");
+            camposel = seleccionarOpcion(campos, 5, INIX, INIY+2, 0);
+            modificarInfoEquipos(temp, camposel);
+            clrscr();
+
+         } while (camposel != EXIT);
+      }
+      else clrscr();
+   }
+
+   if (opcion != LEER)
    {
       if ((pf = fopen(archivo, "wb")) != NULL)
       {
@@ -784,6 +816,39 @@ void mostrarEquipos(NODOEQUIPO *equipos, int n, int px, int py, int actual, int 
    defaultColor();
 
    return;
+}
+
+/*
+   Función     : modificarInfoEquipos
+   Arrgumentos : NODOCLIENTE *equipo: regerencia del equipo
+                 int campo: indica el campo que se va a modificar
+   Objetivo    : modificar un campo en la información del equipo
+   Retorno     : ---
+*/
+void modificarInfoEquipos(NODOEQUIPO *equipos, int campo)
+{
+   int px = INIX+23, py = INIY+2+campo;
+
+   if (campo == 0)
+   {
+      captureTextField(equipos->datos.idequipo, MAXIDEQUIPO-1, px, py, FALSE, TRUE);
+   }
+   if (campo == 1)
+   {
+      captureTextField(equipos->datos.descripcion, LENDESC-1, px, py, FALSE, FALSE);
+   }
+   if (campo == 2)
+   {
+      captureIntegerField(&equipos->datos.cantinventario, 10, px, py);
+   }
+   if (campo == 3)
+   {
+      captureNumericField(&equipos->datos.precioprestamo, 10, 2, px, py);
+   }
+   if (campo == 4)
+   {
+      captureNumericField(&equipos->datos.costoequipo, 10, 2, px, py);
+   }
 }
 
 /*
