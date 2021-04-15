@@ -15,6 +15,13 @@ int main()
 {
    srand(time(NULL));
 
+   NODOPROYECTO *cabproyectos;
+   PROYECTO proyecto;
+   NODOPROPCONTRACTO *cabpropcontracto;
+   PROPCONTRACTO propcontracto;
+   FILE *archproyectos, *archpropocontractos;
+   int index, cantproyectos, cantpropcontractos;
+
    char menuinicio[][MAXOPC] = {"Datos de clientes       ",
                                 "Equipos en inventario   ",
                                 "Proyectos               ",
@@ -52,6 +59,49 @@ int main()
       else if (opcionini == 1)
       {
          opcionesEquipos(opcioncrud, ARCHEQUIPOS);
+      }
+      // proyectos
+      else if (opcionini == 2)
+      {
+         cabproyectos = NULL, cabpropcontracto = NULL;
+
+         // abriendo los archivos de que contienen la información de
+         // los proyectos y propuestas de contractos
+
+         if ((archproyectos = fopen(ARCHPROYECTOS, "rb")) != NULL)
+         {
+            cantproyectos = fsize(archproyectos)/sizeof(PROYECTO);
+            for (index = 0; index < cantproyectos; index++)
+            {
+               fread(&proyecto, sizeof(PROYECTO), 1, archproyectos);
+               insertarFrenteProyecto(&cabproyectos, proyecto);
+            }
+            fclose(archproyectos);
+         }
+         else if (opcioncrud != AGREGAR)
+         {
+            printf("No hay proyectos en marcha.");
+            Sleep(DELAY);
+            clrscr();
+            continue;
+         }
+
+         if ((archpropocontractos) = fopen(ARCHPROPCONTRACTO, "rb") != NULL)
+         {
+            cantpropcontractos = fsize(archpropocontractos)/sizeof(PROPCONTRACTO);
+            for (index = 0; index < cantpropcontractos; index++)
+            {
+               fread(&propcontracto, sizeof(PROPCONTRACTO), 1, archpropocontractos);
+               insertarFrentePropcontracto(&cabpropcontracto, propcontracto);
+            }
+            fclose(archpropocontractos);
+         }
+
+         if (opcioncrud == AGREGAR)
+         {
+            proyecto = nuevoProyecto(cabproyectos, ARCHCLIENTES);
+            clrscr();
+         }
       }
    }
 

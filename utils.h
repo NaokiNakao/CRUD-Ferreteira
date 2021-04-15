@@ -34,8 +34,8 @@
 #define MAXTIPOFACT 9
 #define MAXIDDEVOLUCION 6
 
-#define IDCLIENTEAUX   "               "
-#define IDEQUIPOAUX    "     "
+#define RANDSTR15   "               "
+#define RANDSTR5    "     "
 
 #define FALSE   0
 #define TRUE    1
@@ -73,8 +73,13 @@
 #define MODIFICAR   2
 #define BORRAR      3
 
-#define ARCHCLIENTES   "clientes.dat"
-#define ARCHEQUIPOS    "equipos.dat"
+#define APROBADO   'A'
+#define ENESPERA   'E'
+
+#define ARCHCLIENTES        "clientes.dat"
+#define ARCHEQUIPOS         "equipos.dat"
+#define ARCHPROYECTOS       "proyectos.dat"
+#define ARCHPROPCONTRACTO   "propocontracto.dat"
 
 /* Estructuras */
 
@@ -164,15 +169,23 @@ typedef struct{
 
 typedef struct nodocliente {
    CLIENTE datos;
-   struct nodocliente *siguiente;
-   struct nodocliente *anterior;
+   struct nodocliente *siguiente, *anterior;
 }NODOCLIENTE;
 
 typedef struct nodoequipo {
    EQUIPO datos;
-   struct nodoequipo *siguiente;
-   struct nodoequipo *anterior
+   struct nodoequipo *siguiente, *anterior
 }NODOEQUIPO;
+
+typedef struct nodoproyecto {
+   PROYECTO datos;
+   struct nodoproyecto *siguiente, *anterior;
+}NODOPROYECTO;
+
+typedef struct nodopropcontracto {
+   PROPCONTRACTO datos;
+   struct nodopropcontracto *siguiente, *anterior;
+}NODOPROPCONTRACTO;
 
 /* Prototipos de funciones */
 
@@ -200,6 +213,12 @@ void insertarFrenteEquipo(NODOEQUIPO**, EQUIPO);
 int listarEquipos(NODOEQUIPO*, int, int, int, int);
 void mostrarEquipos(NODOEQUIPO*, int, int, int, int, int, int);
 void modificarInfoEquipos(NODOEQUIPO*, int);
+void eliminarEquipo(NODOEQUIPO**, NODOEQUIPO*);
+
+// funciones para los proyectos y propuestas de contracto
+void insertarFrenteProyecto(NODOPROYECTO**, PROYECTO);
+void insertarFrentePropcontracto(NODOPROPCONTRACTO**, PROPCONTRACTO);
+PROYECTO nuevoProyecto(NODOPROYECTO*, char*);
 
 // validador de campo
 void captureTextField(char*, int, int, int, int, int);

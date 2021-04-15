@@ -209,12 +209,12 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == LEER)
    {
-      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, RANGO);
       clrscr();
    }
    else if (opcion == MODIFICAR)
    {
-      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, RANGO);
       clrscr();
 
       temp = cabeza;
@@ -248,7 +248,7 @@ void opcionesCliente(int opcion, char *archivo)
    }
    else if (opcion == BORRAR)
    {
-      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, 2);
+      seleccionar = listarClientes(cabeza, cantidad, INIX, INIY, RANGO);
       gotoxy(INIX, INIY+9);
       printf("%cSeguro que desea eliminar este cliente? S(i) o N(o): ");
       do {
@@ -312,7 +312,7 @@ void capturarDatosCliente(CLIENTE *cliente)
    captureTextField(cliente->direccion, LENDIR, 11, 8, FALSE, FALSE);
 
    // generando un id para el cliente
-   randomString(cliente->idcliente, IDCLIENTEAUX, INFNUM, SUPNUM);
+   randomString(cliente->idcliente, RANDSTR15, INFNUM, SUPNUM);
 
    return;
 }
@@ -551,9 +551,8 @@ void opcionesEquipos(int opcion, char *archivo)
       cantidad = fsize(pf)/sizeof(EQUIPO);
       equipo = (EQUIPO*)malloc(sizeof(EQUIPO));
 
-      for (index = 0; index < cantidad; index++)
+      while (!feof(pf))
       {
-         fseek(pf, index*sizeof(EQUIPO), SEEK_SET);
          fread(equipo, sizeof(EQUIPO), 1, pf);
          insertarFrenteEquipo(&cabeza, *equipo);
       }
@@ -624,7 +623,31 @@ void opcionesEquipos(int opcion, char *archivo)
       }
       else clrscr();
    }
+   else if (opcion == BORRAR)
+   {
+      seleccionar = listarEquipos(cabeza, cantidad, INIX, INIY, RANGO);
+      gotoxy(INIX, INIY+9);
+      printf("%cSeguro que desea eliminar este equipo? S(i) o N(o): ", 168);
+      do {
+         tecla = toupper(getch());
+      } while (tecla != 'S' && tecla != 'N');
 
+      if (tecla == 'S')
+      {
+         temp = cabeza;
+         for (index = 0; index < seleccionar; index++)
+            temp = temp->siguiente;
+         eliminarEquipo(&cabeza, temp);
+
+         gotoxy(INIX, INIY+10);
+         printf("Equipo eliminado.");
+         Sleep(DELAY);
+      }
+      clrscr();
+   }
+
+   // sobreescribiendo el archivo si la opción seleccionada fue
+   // para agregar, modificar o borrar clientes
    if (opcion != LEER)
    {
       if ((pf = fopen(archivo, "wb")) != NULL)
@@ -666,7 +689,7 @@ void capturarDatosEquipo(EQUIPO *equipo)
    equipo->cantprestados = 0;
 
    // generando un ID para el equipo
-   randomString(equipo->idequipo, IDEQUIPOAUX, INFNUM, SUPNUM);
+   randomString(equipo->idequipo, RANDSTR5, INFNUM, SUPNUM);
 
    return;
 }
@@ -849,6 +872,121 @@ void modificarInfoEquipos(NODOEQUIPO *equipos, int campo)
    {
       captureNumericField(&equipos->datos.costoequipo, 10, 2, px, py);
    }
+}
+
+/*
+   Función     : eliminarEquipo
+   Arrgumentos : NODOEQUIPO **cabeza: referencia a la cabeza de la lista
+                 NODOEQUIPO *elim: nodo de la lista a eliminar
+   Objetivo    : eliminar un equipo
+   Retorno     : ---
+*/
+void eliminarEquipo(NODOEQUIPO **cabeza, NODOEQUIPO *elim)
+{
+   if ((*cabeza) == NULL || elim == NULL)
+      return;
+
+   if ((*cabeza) == elim)
+      (*cabeza) = elim->siguiente;
+
+   if (elim->siguiente != NULL)
+      elim->siguiente->anterior = elim->anterior;
+
+   if (elim->anterior != NULL)
+      elim->anterior->siguiente = elim->siguiente;
+
+   free(elim);
+
+   return;
+}
+
+/*
+   Función     : insertarFrenteProyecto
+   Arrgumentos : NODOPROYECTO **cabeza: cabeza de la lista
+                 PROYECTO info: nueva infromación
+   Objetivo    : insertar información de proyectos al inicio de la lista
+   Retorno     : ---
+*/
+void insertarFrenteProyecto(NODOPROYECTO **cabeza, PROYECTO info)
+{
+   NODOPROYECTO *nuevo = (NODOPROYECTO*)malloc(sizeof(NODOPROYECTO));
+   nuevo->datos = info;
+   nuevo->siguiente = (*cabeza);
+   nuevo->anterior = NULL;
+
+   if ((*cabeza) != NULL)
+      (*cabeza)->anterior = nuevo;
+
+   (*cabeza) = nuevo;
+
+   return;
+}
+
+void insertarFrentePropcontracto(NODOPROPCONTRACTO **cabeza, PROPCONTRACTO info)
+{
+   NODOPROPCONTRACTO *nuevo = (NODOPROPCONTRACTO*)malloc(sizeof(NODOPROPCONTRACTO));
+   nuevo->datos = info;
+   nuevo->siguiente = (*cabeza);
+   nuevo->anterior = NULL;
+
+   if ((*cabeza) != NULL)
+      (*cabeza)->anterior = nuevo;
+
+   (*cabeza) = nuevo;
+
+   return;
+}
+
+/*
+   Función     : nuevoProyecto
+   Arrgumentos : NODOPROYECTO *cabproyectos: lsita de los proyectos
+                 char *fclientes: nombre del archivo con la información de los clientes
+   Objetivo    : iniciar un nuevo proyecto
+   Retorno     : (PROYECTO) proyecto: información de un nuevo proyecto
+*/
+PROYECTO nuevoProyecto(NODOPROYECTO *cabproyectos, char *fclientes)
+{
+   PROYECTO *proyecto = (PROYECTO*)calloc(1, sizeof(PROYECTO));
+   NODOCLIENTE *cabclientes = NULL, *temp;
+   CLIENTE cliente;
+   FILE *pf;
+   int index, seleccionar, cantclientes;
+
+   printf("Digite la informaci%cn del proyecto:\n\n", 162);
+   printf("Descripci%cn: ", 162);
+   captureTextField(proyecto->descripcion, LENDESC-1, 13, 3, FALSE, FALSE);
+
+   // seleccionando el cliente dueño del proyecto
+
+   if ((pf = fopen(fclientes, "rb")) != NULL)
+   {
+      cantclientes = fsize(pf)/sizeof(CLIENTE);
+      while (!feof(pf))
+      {
+         fread(&cliente, sizeof(CLIENTE), 1, pf);
+         insertarFrenteCliente(&cabclientes, cliente);
+      }
+      fclose(pf);
+   }
+   else
+   {
+      printf("\nNo hay clientes agregados.");
+      Sleep(DELAY);
+      return;
+   }
+
+   printf("\nDue%co del proyecto:", 164);
+   seleccionar = listarClientes(cabclientes, cantclientes, INIX, INIY+5, RANGO);
+
+   temp = cabclientes;
+   for (index = 0; index < seleccionar; index++)
+      temp = temp->siguiente;
+   strcpy(proyecto->idcliente, &temp->datos.idcliente);
+
+   // generando un id aleatorio para el proyecto
+   randomString(proyecto->idproyecto, RANDSTR5, INFNUM, SUPNUM);
+
+   return (*proyecto);
 }
 
 /*
